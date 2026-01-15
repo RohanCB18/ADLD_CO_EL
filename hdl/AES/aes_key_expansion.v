@@ -107,7 +107,7 @@ module key_expansion (
 
       r_W_2  =  i_Key[063:032];
 
-      r_W_3  =  i_Key[031 - 1:000];
+      r_W_3  =  i_Key[031:000];
 
       r_W_4  =  i_Key[127:096] ^ w_Sub_Word ^ {8'h01,24'b0};
  
