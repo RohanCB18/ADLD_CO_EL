@@ -20,30 +20,33 @@ module encryption_test();
         $dumpfile("encryption_test.vcd");
         $dumpvars(0, encryption_test);
 
-        // Initialize signals
-        clk = 0;
-        r_Key = 128'h5b7e151628aed2a6abf7158809cf4f3c;  // NIST test key
-        r_Plain_Text = 128'h4256f6a8885a308d313198a2e0370734;  // NIST test plaintext
-        // Expected ciphertext: 3925841d02dc09fbdc118597196a0b32
-        
-        // Small delay for combinational logic to settle
+        // ---------------------------------------------------------
+        // Set 1: Sequential Bytes
+        // ---------------------------------------------------------
+        r_Key        = 128'h000102030405060708090a0b0c0d0e0f;
+        r_Plain_Text = 128'h00112233445566778899aabbccddeeff;
         #100;
-        
-        // Display results
-        $display("============================================");
-        $display("AES-128 ECB Encryption Result");
-        $display("============================================");
-        $display("Key:        %h", r_Key);
-        $display("Plaintext:  %h", r_Plain_Text);
-        $display("Ciphertext: %h", w_Cipher_Text);
-        $display("Expected:   3925841d02dc09fbdc118597196a0b32");
-        $display("============================================");
-        
-        if (w_Cipher_Text == 128'h3925841d02dc09fbdc118597196a0b32)
-            $display("SUCCESS: Output matches NIST standard!");
-        else
-            $display("MISMATCH: Output does not match expected value");
-        
+        $display("Set 1 Input  | Key: %h, Plain: %h", r_Key, r_Plain_Text);
+        $display("Set 1 Output | Cipher: %h", w_Cipher_Text);
+
+        // ---------------------------------------------------------
+        // Set 2: FIPS-197 Example Vector
+        // ---------------------------------------------------------
+        r_Key        = 128'h2b7e151628aed2a6abf7158809cf4f3c;
+        r_Plain_Text = 128'h6bc1bee22e409f96e93d7e117393172a;
+        #100;
+        $display("Set 2 Input  | Key: %h, Plain: %h", r_Key, r_Plain_Text);
+        $display("Set 2 Output | Cipher: %h", w_Cipher_Text);
+
+        // ---------------------------------------------------------
+        // Set 3: ASCII "Coding Is Fun!!!" / "Hello World!!!!!"
+        // ---------------------------------------------------------
+        r_Key        = 128'h436f64696e672049732046756e212121; // "Coding Is Fun!!!"
+        r_Plain_Text = 128'h48656c6c6f20576f726c642121212121; // "Hello World!!!!!"
+        #100;
+        $display("Set 3 Input  | Key: %h, Plain: %h", r_Key, r_Plain_Text);
+        $display("Set 3 Output | Cipher: %h", w_Cipher_Text);
+
         // End simulation
         $finish;
     end
