@@ -1,13 +1,20 @@
 `timescale 1ns / 1ps
 
-// NIST-compliant AES-128 Encryption Module (Combinational)
-// Matches CyberChef ECB mode output exactly
+// NIST-compliant AES-128 Encryption Module (Sequential / Clocked)
+// Hardware-style implementation: 1 Round per Clock Cycle
 
 module aes128_encrypt (
+    input wire clk,
+    input wire rst_n, // Active low reset
     input wire [127:0] plaintext,
     input wire [127:0] key,
-    output wire [127:0] ciphertext
+    output reg [127:0] ciphertext,
+    output reg done
 );
+
+    // =========================================================================
+    // 1. Functions (S-Box, Math, MixColumns) - Reuse Logic
+    // =========================================================================
 
     // S-Box lookup table (NIST standard)
     function [7:0] sbox;
@@ -141,6 +148,10 @@ module aes128_encrypt (
         end
     endfunction
 
+    // =========================================================================
+    // 2. Key Expansion (Kept Combinational for Code Compactness)
+    // =========================================================================
+    
     // Key schedule core (RotWord + SubWord + Rcon)
     function [31:0] key_core;
         input [31:0] word;
@@ -150,8 +161,8 @@ module aes128_encrypt (
         end
     endfunction
 
-    // Round keys (all 11 round keys computed combinationally)
-    wire [127:0] rk0, rk1, rk2, rk3, rk4, rk5, rk6, rk7, rk8, rk9, rk10;
+    // Round keys
+    wire [127:0] rk[0:10];
     wire [31:0] w [0:43];
     
     // Initial key words
@@ -161,90 +172,62 @@ module aes128_encrypt (
     assign w[3] = key[31:0];
     
     // Key expansion
-    assign w[4]  = w[0] ^ key_core(w[3], 8'h01);
-    assign w[5]  = w[1] ^ w[4];
-    assign w[6]  = w[2] ^ w[5];
-    assign w[7]  = w[3] ^ w[6];
+    assign w[4]  = w[0] ^ key_core(w[3], 8'h01); assign w[5]  = w[1] ^ w[4]; assign w[6]  = w[2] ^ w[5]; assign w[7]  = w[3] ^ w[6];
+    assign w[8]  = w[4] ^ key_core(w[7], 8'h02); assign w[9]  = w[5] ^ w[8]; assign w[10] = w[6] ^ w[9]; assign w[11] = w[7] ^ w[10];
+    assign w[12] = w[8] ^ key_core(w[11], 8'h04); assign w[13] = w[9] ^ w[12]; assign w[14] = w[10] ^ w[13]; assign w[15] = w[11] ^ w[14];
+    assign w[16] = w[12] ^ key_core(w[15], 8'h08); assign w[17] = w[13] ^ w[16]; assign w[18] = w[14] ^ w[17]; assign w[19] = w[15] ^ w[18];
+    assign w[20] = w[16] ^ key_core(w[19], 8'h10); assign w[21] = w[17] ^ w[20]; assign w[22] = w[18] ^ w[21]; assign w[23] = w[19] ^ w[22];
+    assign w[24] = w[20] ^ key_core(w[23], 8'h20); assign w[25] = w[21] ^ w[24]; assign w[26] = w[22] ^ w[25]; assign w[27] = w[23] ^ w[26];
+    assign w[28] = w[24] ^ key_core(w[27], 8'h40); assign w[29] = w[25] ^ w[28]; assign w[30] = w[26] ^ w[29]; assign w[31] = w[27] ^ w[30];
+    assign w[32] = w[28] ^ key_core(w[31], 8'h80); assign w[33] = w[29] ^ w[32]; assign w[34] = w[30] ^ w[33]; assign w[35] = w[31] ^ w[34];
+    assign w[36] = w[32] ^ key_core(w[35], 8'h1b); assign w[37] = w[33] ^ w[36]; assign w[38] = w[34] ^ w[37]; assign w[39] = w[35] ^ w[38];
+    assign w[40] = w[36] ^ key_core(w[39], 8'h36); assign w[41] = w[37] ^ w[40]; assign w[42] = w[38] ^ w[41]; assign w[43] = w[39] ^ w[42];
     
-    assign w[8]  = w[4] ^ key_core(w[7], 8'h02);
-    assign w[9]  = w[5] ^ w[8];
-    assign w[10] = w[6] ^ w[9];
-    assign w[11] = w[7] ^ w[10];
-    
-    assign w[12] = w[8] ^ key_core(w[11], 8'h04);
-    assign w[13] = w[9] ^ w[12];
-    assign w[14] = w[10] ^ w[13];
-    assign w[15] = w[11] ^ w[14];
-    
-    assign w[16] = w[12] ^ key_core(w[15], 8'h08);
-    assign w[17] = w[13] ^ w[16];
-    assign w[18] = w[14] ^ w[17];
-    assign w[19] = w[15] ^ w[18];
-    
-    assign w[20] = w[16] ^ key_core(w[19], 8'h10);
-    assign w[21] = w[17] ^ w[20];
-    assign w[22] = w[18] ^ w[21];
-    assign w[23] = w[19] ^ w[22];
-    
-    assign w[24] = w[20] ^ key_core(w[23], 8'h20);
-    assign w[25] = w[21] ^ w[24];
-    assign w[26] = w[22] ^ w[25];
-    assign w[27] = w[23] ^ w[26];
-    
-    assign w[28] = w[24] ^ key_core(w[27], 8'h40);
-    assign w[29] = w[25] ^ w[28];
-    assign w[30] = w[26] ^ w[29];
-    assign w[31] = w[27] ^ w[30];
-    
-    assign w[32] = w[28] ^ key_core(w[31], 8'h80);
-    assign w[33] = w[29] ^ w[32];
-    assign w[34] = w[30] ^ w[33];
-    assign w[35] = w[31] ^ w[34];
-    
-    assign w[36] = w[32] ^ key_core(w[35], 8'h1b);
-    assign w[37] = w[33] ^ w[36];
-    assign w[38] = w[34] ^ w[37];
-    assign w[39] = w[35] ^ w[38];
-    
-    assign w[40] = w[36] ^ key_core(w[39], 8'h36);
-    assign w[41] = w[37] ^ w[40];
-    assign w[42] = w[38] ^ w[41];
-    assign w[43] = w[39] ^ w[42];
-    
-    // Round keys
-    assign rk0  = {w[0], w[1], w[2], w[3]};
-    assign rk1  = {w[4], w[5], w[6], w[7]};
-    assign rk2  = {w[8], w[9], w[10], w[11]};
-    assign rk3  = {w[12], w[13], w[14], w[15]};
-    assign rk4  = {w[16], w[17], w[18], w[19]};
-    assign rk5  = {w[20], w[21], w[22], w[23]};
-    assign rk6  = {w[24], w[25], w[26], w[27]};
-    assign rk7  = {w[28], w[29], w[30], w[31]};
-    assign rk8  = {w[32], w[33], w[34], w[35]};
-    assign rk9  = {w[36], w[37], w[38], w[39]};
-    assign rk10 = {w[40], w[41], w[42], w[43]};
+    // Assign to round key array
+    assign rk[0]  = {w[0], w[1], w[2], w[3]};
+    assign rk[1]  = {w[4], w[5], w[6], w[7]};
+    assign rk[2]  = {w[8], w[9], w[10], w[11]};
+    assign rk[3]  = {w[12], w[13], w[14], w[15]};
+    assign rk[4]  = {w[16], w[17], w[18], w[19]};
+    assign rk[5]  = {w[20], w[21], w[22], w[23]};
+    assign rk[6]  = {w[24], w[25], w[26], w[27]};
+    assign rk[7]  = {w[28], w[29], w[30], w[31]};
+    assign rk[8]  = {w[32], w[33], w[34], w[35]};
+    assign rk[9]  = {w[36], w[37], w[38], w[39]};
+    assign rk[10] = {w[40], w[41], w[42], w[43]};
 
-    // Encryption rounds (all combinational)
-    wire [127:0] s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10;
-    
-    // Initial AddRoundKey
-    assign s0 = plaintext ^ rk0;
-    
-    // Rounds 1-9 (SubBytes, ShiftRows, MixColumns, AddRoundKey)
-    assign s1 = mix_columns(shift_rows(sub_bytes(s0))) ^ rk1;
-    assign s2 = mix_columns(shift_rows(sub_bytes(s1))) ^ rk2;
-    assign s3 = mix_columns(shift_rows(sub_bytes(s2))) ^ rk3;
-    assign s4 = mix_columns(shift_rows(sub_bytes(s3))) ^ rk4;
-    assign s5 = mix_columns(shift_rows(sub_bytes(s4))) ^ rk5;
-    assign s6 = mix_columns(shift_rows(sub_bytes(s5))) ^ rk6;
-    assign s7 = mix_columns(shift_rows(sub_bytes(s6))) ^ rk7;
-    assign s8 = mix_columns(shift_rows(sub_bytes(s7))) ^ rk8;
-    assign s9 = mix_columns(shift_rows(sub_bytes(s8))) ^ rk9;
-    
-    // Round 10 (SubBytes, ShiftRows, AddRoundKey - no MixColumns)
-    assign s10 = shift_rows(sub_bytes(s9)) ^ rk10;
-    
-    // Output
-    assign ciphertext = s10;
+    // =========================================================================
+    // 3. Sequential Logic (State Machine)
+    // =========================================================================
+
+    reg [3:0] round_counter;
+    reg [127:0] state_reg;
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            // Reset: Prepare for new encryption
+            round_counter <= 0;
+            done <= 0;
+            state_reg <= 0;
+            ciphertext <= 0;
+        end else begin
+            if (round_counter == 0) begin
+                // Initial Round: AddRoundKey(0)
+                state_reg <= plaintext ^ rk[0];
+                round_counter <= round_counter + 1;
+                done <= 0;
+            end else if (round_counter < 10) begin
+                // Rounds 1-9: SubBytes -> ShiftRows -> MixColumns -> AddRoundKey
+                state_reg <= mix_columns(shift_rows(sub_bytes(state_reg))) ^ rk[round_counter];
+                round_counter <= round_counter + 1;
+            end else if (round_counter == 10) begin
+                // Round 10: SubBytes -> ShiftRows -> AddRoundKey (No MixColumns)
+                ciphertext <= shift_rows(sub_bytes(state_reg)) ^ rk[10];
+                done <= 1;
+                // Go to idle state (11) until reset
+                round_counter <= 11; 
+            end
+        end
+    end
 
 endmodule
