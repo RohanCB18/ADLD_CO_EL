@@ -7,6 +7,8 @@ module encryption_test();
 
     wire [127:0] w_Cipher_Text;
     wire w_Done;
+    wire [3:0] w_Round_Count;
+    wire [127:0] w_State;
 
     // Instantiate Sequential AES
     aes128_encrypt AES(
@@ -15,7 +17,9 @@ module encryption_test();
         .plaintext(r_Plain_Text),
         .key(r_Key),
         .ciphertext(w_Cipher_Text),
-        .done(w_Done)
+        .done(w_Done),
+        .round_count_out(w_Round_Count),
+        .state_out(w_State)
     );
 
     // Clock generation (Period = 20ns, Freq = 50MHz)
@@ -40,7 +44,7 @@ module encryption_test();
         // Pulse reset for new operation
         rst_n = 0; #20; rst_n = 1;
         
-        r_Key        = 128'h000102030405060708090a0b0c0d0e0f;
+        r_Key        = 128'h000002030405060708090a0b0c0d0e0f;
         r_Plain_Text = 128'h00112233445566778899aabbccddeeff;
         
         // Wait for completion (11 cycles * 20ns = ~220ns -> use 500ns to be safe)

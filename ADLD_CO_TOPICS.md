@@ -55,3 +55,19 @@ This document maps the implementation details of the AES-128 hardware project to
 *   **The Memory System:**
     *   **Concept:** Registers vs Cache.
     *   **Project Usage:** The `state_reg` serves as the **Accumulator** or internal Register File, holding the temporary results of the computation so they aren't lost between clock cycles.
+
+## 3. AES Decryption Specific Mapping
+
+### **Unit-I & Unit-IV: Arithmetic & Logic**
+*   **Inverse Operations:**
+    *   **Concept:** Inverse Functions / Reversibility.
+    *   **Project Usage:**
+        *   **Inverse S-Box (inv_sbox):** Uses a distinct Look-Up Table (LUT) that is the mathematical inverse of the Forward S-Box. This maps 63 -> 00 instead of 00 -> 63.
+        *   **Inverse MixColumns (inv_mix_columns):** Involves multiplication by different coefficients (0x09, 0x0b, 0x0d, 0x0e) in the Galois Field, requiring more complex XOR trees than the forward operation.
+
+### **Unit-II: Sequential Logic**
+*   **Reverse Data Flow:**
+    *   **Concept:** Bidirectional Shift Registers / Reversible Logic.
+    *   **Project Usage:**
+        *   **Inverse ShiftRows (inv_shift_rows):** Similar to a circular right shift (instead of left shift used in encryption).
+        *   **Key Scheduling:** The decryption module requires keys to be used in **Reverse Order** (Round 10 Key first, down to Round 0 Key). This demonstrates advanced state management where inputs (keys) must be pre-calculated or stored/retrieved in LIFO (Last-In-First-Out) order.

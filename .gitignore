@@ -1,3 +1,15 @@
-.DS_Store
+# Simulation Artifacts
 *.vcd
-*.out
+*.log
+simulation_log*.txt
+decryption_log*.txt
+
+# Compiled Executables
+*.exe
+aes_test
+aes_decrypt_test
+ivl_uvm_run
+
+# Temporary/System Files
+.DS_Store
+Thumbs.db
