@@ -51,7 +51,7 @@ module decryption_test();
         
         #500; 
         $display("Set 1 Input  | Key: %h, Cipher: %h", r_Key, r_Cipher_Text);
-        $display("Set 1 Output | Plain: %h (Expected: 00112233445566778899aabbccddeeff)", w_Plain_Text);
+        $display("Set 1 Output | Plain: %h ", w_Plain_Text);
 
         // ---------------------------------------------------------
         // Set 2: FIPS-197 Example Vector
@@ -66,7 +66,7 @@ module decryption_test();
         
         #500;
         $display("Set 2 Input  | Key: %h, Cipher: %h", r_Key, r_Cipher_Text);
-        $display("Set 2 Output | Plain: %h (Expected: 6bc1bee22e409f96e93d7e117393172a)", w_Plain_Text);
+        $display("Set 2 Output | Plain: %h ", w_Plain_Text);
 
         // ---------------------------------------------------------
         // Set 3: ASCII "Coding Is Fun!!!"
@@ -81,7 +81,7 @@ module decryption_test();
         
         #500;
         $display("Set 3 Input  | Key: %h, Cipher: %h", r_Key, r_Cipher_Text);
-        $display("Set 3 Output | Plain: %h (Expected: 48656c6c6f20576f726c642121212121)", w_Plain_Text);
+        $display("Set 3 Output | Plain: %h ", w_Plain_Text);
 
         // End simulation
         $finish;
