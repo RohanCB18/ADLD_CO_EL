@@ -18,6 +18,16 @@ const toMatrixString = (matrix) =>
     .map((row) => row.map((value) => value.toString(16).padStart(2, "0")).join(" "))
     .join("\n");
 
+const getRoundDescription = (round) => {
+  if (round === 0) {
+    return "The initial round performs 'Key Whitening'. The 128-bit key is XORed directly with the plaintext to mask the input data before processing begins.";
+  }
+  if (round === 10) {
+    return "The final round of encryption. It is similar to the standard rounds but omits the 'MixColumns' step. This structure is crucial for the reversibility of the cipher during decryption.";
+  }
+  return "A standard round of AES encryption. It applies four distinct transformations: non-linear substitution (SubBytes), row shifting (ShiftRows), column mixing (MixColumns), and key addition (AddRoundKey) to scramble the data.";
+};
+
 const App = () => {
   const [plaintextHex, setPlaintextHex] = useState(DEFAULT_PLAINTEXT);
   const [keyHex, setKeyHex] = useState(DEFAULT_KEY);
@@ -41,7 +51,12 @@ const App = () => {
     }
   }, [sanitizedPlaintext, sanitizedKey]);
 
-  const cipherHex = result ? bytesToHex(result.cipherState, " ") : "";
+  const [currentRound, setCurrentRound] = useState(0);
+
+  // Reset round when inputs change to avoid out-of-bounds errors
+  React.useEffect(() => {
+    setCurrentRound(0);
+  }, [sanitizedPlaintext, sanitizedKey]);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-16 text-slate-900">
@@ -127,7 +142,7 @@ const App = () => {
                   Ciphertext
                 </h3>
                 <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 font-mono text-sm uppercase tracking-widest text-emerald-900 shadow-inner">
-                  {cipherHex}
+                  {bytesToHex(result.cipherState, " ")}
                 </p>
                 <p className="mt-4 text-xs text-slate-400">
                   Expected ciphertext for FIPS-197 example: 69 c4 e0 d8 6a 7b
@@ -140,54 +155,107 @@ const App = () => {
           <main className="space-y-8">
             {result ? (
               <>
-                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                    <div className="md:w-1/2">
-                      <h2 className="text-base font-bold uppercase tracking-[0.35em] text-emerald-600">
-                        Initial State
-                      </h2>
-                      <p className="mt-2 text-sm text-slate-500">
-                        The plaintext is mapped column-wise into the state matrix
-                        before round transformations start.
-                      </p>
-                    </div>
-                    <div className="md:w-1/2 flex justify-center md:justify-end">
-                      <StateMatrix
-                        matrix={stateToMatrix(hexToBytes(sanitizedPlaintext))}
-                        accent="bg-emerald-100"
-                      />
-                    </div>
-                  </div>
-                </section>
+                {/* Stepper Navigation */}
+                <nav className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <button
+                    disabled={currentRound === 0}
+                    onClick={() => setCurrentRound((p) => Math.max(0, p - 1))}
+                    className="flex w-32 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-600 transition hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
 
-                <section className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 items-stretch">
-                  {result.rounds.map((round) => (
-                    <RoundCard key={round.round} round={round} />
-                  ))}
-                  <section className="h-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h2 className="text-base font-bold uppercase tracking-[0.35em] text-emerald-600">
-                      Round Keys
-                    </h2>
-                    <p className="mt-2 text-sm text-slate-500 mb-4">
-                      11 round keys derived via Rijndael key schedule.
-                    </p>
-                    <div className="grid gap-3 h-[30rem] overflow-y-auto pr-2 custom-scrollbar">
-                      {result.roundKeys.map((roundKey, index) => (
+                  <div className="flex flex-col items-center">
+                    <span className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
+                      Round {currentRound} of 10
+                    </span>
+                    <div className="mt-2 flex gap-1">
+                      {new Array(11).fill(0).map((_, i) => (
                         <div
-                          key={`round-key-${index}`}
-                          className="rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs uppercase tracking-widest text-slate-600"
-                        >
-                          <p className="mb-1 text-[0.65rem] font-bold tracking-[0.4em] text-emerald-600">
-                            Round {index}
-                          </p>
-                          <pre className="whitespace-pre-wrap break-words">
-                            {bytesToHex(roundKey, " ")}
-                          </pre>
-                        </div>
+                          key={i}
+                          className={`h-1.5 w-6 rounded-full transition-all ${i === currentRound ? "bg-emerald-500 scale-110" : "bg-slate-200"
+                            }`}
+                        />
                       ))}
                     </div>
-                  </section>
-                </section>
+                  </div>
+
+                  <button
+                    disabled={currentRound === 10}
+                    onClick={() => setCurrentRound((p) => Math.min(10, p + 1))}
+                    className="flex w-32 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold uppercase tracking-widest text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </nav>
+
+                <div className="flex flex-col xl:flex-row gap-6">
+                  {/* Left Column: Round Visualization (Focus) */}
+                  <div className="flex-1 space-y-6">
+                    <RoundCard key={result.rounds[currentRound].round} round={result.rounds[currentRound]} />
+                  </div>
+
+                  {/* Right Column: Context (Initial State & Keys) */}
+                  <div className="xl:w-80 flex flex-col gap-6">
+                    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 mb-4">
+                        Round {currentRound} Overview
+                      </h2>
+                      <p className="text-sm text-slate-600 leading-relaxed mb-6">
+                        {getRoundDescription(currentRound)}
+                      </p>
+
+                      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 mb-3">
+                        Operations in this step
+                      </h3>
+                      <div className="space-y-3">
+                        {result.rounds[currentRound].operations.map((op, i) => (
+                          <div key={i} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                              {op.name}
+                            </h4>
+                            <p className="mt-1 text-sm text-slate-600 leading-relaxed">
+                              {op.description}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 mb-4">
+                        Initial State
+                      </h2>
+                      <div className="flex justify-center">
+                        <StateMatrix
+                          matrix={stateToMatrix(hexToBytes(sanitizedPlaintext))}
+                          accent="bg-emerald-100"
+                        />
+                      </div>
+                    </section>
+
+                    <section className="flex-1 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col min-h-[16rem]">
+                      <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 mb-2">
+                        Round Key {currentRound}
+                      </h2>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-xs uppercase tracking-widest text-slate-600 break-all">
+                        {bytesToHex(result.roundKeys[currentRound], " ")}
+                      </div>
+
+                      <div className="mt-auto pt-6">
+                        <h3 className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Full Key Schedule</h3>
+                        <div className="h-40 overflow-y-auto pr-2 custom-scrollbar text-[0.65rem] font-mono text-slate-400 space-y-1">
+                          {result.roundKeys.map((k, i) => (
+                            <div key={i} className={`flex gap-2 ${i === currentRound ? "text-emerald-600 font-bold" : ""}`}>
+                              <span className="opacity-50 min-w-[3ch]">{i}:</span>
+                              <span>{bytesToHex(k, "")}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+
               </>
             ) : (
               <section className="rounded-2xl border border-slate-200 bg-white p-10 text-center">
