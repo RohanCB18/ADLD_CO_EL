@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   bytesToHex,
   encryptBlockWithTrace,
@@ -61,6 +62,22 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-50 pb-16 text-slate-900">
       <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-10 px-4 pt-12 sm:px-8">
+        {/* Navigation Tabs */}
+        <nav className="flex gap-2">
+          <Link
+            to="/"
+            className="rounded-full border border-emerald-200 bg-emerald-50 px-6 py-2.5 text-sm font-bold uppercase tracking-widest text-emerald-700"
+          >
+            🔐 Encryption
+          </Link>
+          <Link
+            to="/decrypt"
+            className="rounded-full border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold uppercase tracking-widest text-slate-600 transition hover:border-rose-200 hover:text-rose-700"
+          >
+            🔓 Decryption
+          </Link>
+        </nav>
+
         <header className="rounded-2xl border border-slate-200 bg-white p-10 shadow-sm">
           <p className="mb-3 text-sm uppercase tracking-[0.65em] text-emerald-600 font-bold">
             Demonstration
